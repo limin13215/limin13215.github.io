@@ -1,0 +1,81 @@
+---
+layout: post
+title:  "mtk M8735平台android L版本修改记录"
+page.date:   2015-12-23 11:37 +0800
+categories: jekyll update
+---
+
+
+有些东西修改起来很简单，但是修改的过程却很费时，本着相互学习共同进步的原则，为方便他人，也提高自己，把自己平时修改过的东西贴出来，有帮到别人，那是我的荣幸。
+------------------------------------------------------------------------
+
+1.默认语言修改为中文
+
+```
+diff --git a/build/tools/buildinfo.sh b/build/tools/buildinfo.sh
+index a80b2db..1b10d23 100755
+--- a/build/tools/buildinfo.sh
++++ b/build/tools/buildinfo.sh
+@@ -56,4 +56,11 @@ if [ -n "$BUILD_THUMBPRINT" ] ; then
+ fi
+ echo "ro.build.characteristics=$TARGET_AAPT_CHARACTERISTICS"
+ 
++echo "persist.sys.language=zh"
++echo "persist.sys.country=CN"
++echo "persist.sys.localevar="
++echo "persist.sys.timezone=Asia/Shanghai"
++echo "ro.product.locale.language=zh"
++echo "ro.product.locale.region=CN"
+```
+
+2.默认开机logo
+```
+查看存放logo图片的文件夹，可以看到有很多不同分辨率的文件夹
+mli@SmdtSDK-Virtual-Machine:~/MTK/work/l18735_git$ ll bootable/bootloader/lk/dev/logo
+总用量 292
+drwxr-xr-x 69 mli mli  4096 12月 22 15:38 ./
+drwxrwxr-x 13 mli mli  4096 12月 22 14:38 ../
+-rwxr--r--  1 mli mli 10064 12月 22 15:38 rules.mk*
+drwxr-xr-x  4 mli mli  4096 11月 16 15:21 tool/
+-rwxr--r--  1 mli mli  3327 11月 16 14:07 update*
+drwxr-xr-x  2 mli mli  4096 11月 16 15:25 wsvga/
+drwxr-xr-x  2 mli mli  4096 11月 16 15:29 wvga/
+drwxr-xr-x  2 mli mli  4096 11月 16 15:29 wvgalnl/
+drwxr-xr-x  2 mli mli  4096 11月 16 15:29 wxga/
+...
+```
+选择自己想要的，此处，我选择的是800*1280的，所以按如下选择wxga:
+
+```
+diff --git a/bootable/bootloader/lk/project/elink8735m_3_h.mk 
+           b/bootable/bootloader/lk/project/elink8735m_3_h.mk
+index ab15d3e..18201d2 100755
+--- a/bootable/bootloader/lk/project/elink8735m_3_h.mk
++++ b/bootable/bootloader/lk/project/elink8735m_3_h.mk
+ #FASTBOOT_USE_G_ORIGINAL_PROTOCOL = yes
+@@ -22,7 +22,7 @@ MTK_VERIFIED_BOOT_SUPPORT = yes
+ MTK_SEC_FASTBOOT_UNLOCK_SUPPORT = yes
+ 
+ DEBUG := 0
+-BOOT_LOGO=wsvga
++BOOT_LOGO=wxga
+```
+
+3.机器开机logo，开机动画，启动后都默认为竖屏显示，现在需要反转90°为横屏显示：
+关键参数：ro.sf.hwrotation
+
+```
+--- a/frameworks/native/services/surfaceflinger/mediatek/SurfaceFlinger.cpp
++++ b/frameworks/native/services/surfaceflinger/mediatek/SurfaceFlinger.cpp
+@@ -259,7 +259,7 @@ void SurfaceFlinger::setMTKProperties(String8 &result) {
+ 
+     // get info for panel physical rotation
+     property_get("ro.sf.hwrotation", value, "0");
+-    sPropertiesState.mHwRotation = atoi(value);
++    sPropertiesState.mHwRotation = 90;
+     snprintf(buffer, sizeof(buffer), "    ro.sf.hwrotation (mHwRotation): %d\n", sPropertiesState.mHwRotation);
+     result.append(buffer);
+```
+经过上面的修改，开机动画和启动后都默认变为横屏显示了，开机logo修改图片就行，但是这样会导致tp触摸和gsensor重力感应也反转了90°，tp和gsensor反转问题，可以联系相应IC FAE修改一下。
+
+4.
